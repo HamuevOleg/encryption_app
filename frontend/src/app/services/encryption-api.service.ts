@@ -1,55 +1,44 @@
-import { inject, Injectable } from '@angular/core';
+import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { environment } from '../../environments/environment';
 import {
-  EncryptRequest,
-  EncryptResponse,
+  AsymKeyPairResponse,
   DecryptRequest,
   DecryptResponse,
-  AesKeyResponse,
-  AsymKeyPairResponse,
-  FileEncryptRequest,
-  FileEncryptResponse,
-  FileDecryptRequest,
-  FileDecryptResponse,
-  OperationLog,
+  EncryptRequest,
+  EncryptResponse,
+  GenerateKeyResponse,
+  AesKeySize
 } from '../models/encryption.models';
-import { environment } from '../../environments/environment';
 
-@Injectable({ providedIn: 'root' })
+@Injectable({
+  providedIn: 'root',
+})
 export class EncryptionApiService {
-  private readonly http = inject(HttpClient);
-  private readonly baseUrl = environment.apiUrl;
+  private readonly apiUrl = environment.apiUrl;
 
-  encrypt(body: EncryptRequest): Observable<EncryptResponse> {
-    return this.http.post<EncryptResponse>(`${this.baseUrl}/encrypt`, body);
-  }
+  constructor(private readonly http: HttpClient) {}
 
-  decrypt(body: DecryptRequest): Observable<DecryptResponse> {
-    return this.http.post<DecryptResponse>(`${this.baseUrl}/decrypt`, body);
-  }
-
-  generateAesKey(): Observable<AesKeyResponse> {
-    return this.http.post<AesKeyResponse>(`${this.baseUrl}/generate-key/aes`, {});
+  generateAesKey(size: AesKeySize = 256): Observable<GenerateKeyResponse> {
+    return this.http.get<GenerateKeyResponse>(`${this.apiUrl}/keys/aes`, {
+      params: { size: size.toString() }
+    });
   }
 
   generateRsaKeys(): Observable<AsymKeyPairResponse> {
-    return this.http.post<AsymKeyPairResponse>(`${this.baseUrl}/generate-key/rsa`, {});
+    return this.http.post<AsymKeyPairResponse>(`${this.apiUrl}/keys/rsa`, {});
   }
 
   generateEccKeys(): Observable<AsymKeyPairResponse> {
-    return this.http.post<AsymKeyPairResponse>(`${this.baseUrl}/generate-key/ecc`, {});
+    return this.http.post<AsymKeyPairResponse>(`${this.apiUrl}/keys/ecc`, {});
   }
 
-  encryptFile(body: FileEncryptRequest): Observable<FileEncryptResponse> {
-    return this.http.post<FileEncryptResponse>(`${this.baseUrl}/encrypt-file`, body);
+  encrypt(data: EncryptRequest): Observable<EncryptResponse> {
+    return this.http.post<EncryptResponse>(`${this.apiUrl}/encrypt`, data);
   }
 
-  decryptFile(body: FileDecryptRequest): Observable<FileDecryptResponse> {
-    return this.http.post<FileDecryptResponse>(`${this.baseUrl}/decrypt-file`, body);
-  }
-
-  getRecentOperations(limit = 10): Observable<OperationLog[]> {
-    return this.http.get<OperationLog[]>(`${this.baseUrl}/operations`);
+  decrypt(data: DecryptRequest): Observable<DecryptResponse> {
+    return this.http.post<DecryptResponse>(`${this.apiUrl}/decrypt`, data);
   }
 }

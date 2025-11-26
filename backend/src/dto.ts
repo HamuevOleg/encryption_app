@@ -1,66 +1,42 @@
-export type EncryptionMethod = "AES" | "RSA" | "ECC";
+import { t } from 'elysia';
 
-export interface EncryptRequestDto {
-  method: EncryptionMethod;
-  text: string;
-  key?: string;
-  publicKey?: string;
-}
+// Новое: DTO для генерации ключа с параметром size
+export const GenerateAesKeyQuery = t.Object({
+    size: t.Optional(t.Numeric({ default: 256 }))
+});
 
-export interface EncryptResponseDto {
-  encryptedText: string;
-  method: EncryptionMethod;
-  executionTimeMs: number;
-}
+export const EncryptBody = t.Object({
+    method: t.Union([t.Literal('AES'), t.Literal('RSA'), t.Literal('ECC')]),
+    text: t.String(),
+    key: t.Optional(t.String()),        // AES key (base64)
+    publicKey: t.Optional(t.String())   // RSA/ECC public key
+});
 
-export interface DecryptRequestDto {
-  method: EncryptionMethod;
-  encryptedText: string;
-  key?: string;
-  privateKey?: string;
-}
+export const DecryptBody = t.Object({
+    method: t.Union([t.Literal('AES'), t.Literal('RSA'), t.Literal('ECC')]),
+    encryptedText: t.String(),
+    key: t.Optional(t.String()),        // AES key (base64)
+    privateKey: t.Optional(t.String())  // RSA/ECC private key
+});
 
-export interface DecryptResponseDto {
-  decryptedText: string;
-  method: EncryptionMethod;
-  executionTimeMs: number;
-}
+// Response DTOs
+export const EncryptResponse = t.Object({
+    encryptedText: t.String(),
+    method: t.String(),
+    executionTimeMs: t.Number(),
+});
 
-export interface AesKeyResponseDto {
-  key: string;
-}
+export const DecryptResponse = t.Object({
+    decryptedText: t.String(),
+    method: t.String(),
+    executionTimeMs: t.Number(),
+});
 
-export interface AsymKeyPairResponseDto {
-  publicKey: string;
-  privateKey: string;
-}
+export const AesKeyResponse = t.Object({
+    key: t.String()
+});
 
-export interface FileEncryptRequestDto {
-  method: EncryptionMethod;
-  dataBase64: string;
-  key?: string;
-  publicKey?: string;
-  fileName?: string;
-  mimeType?: string;
-}
-
-export interface FileEncryptResponseDto {
-  encryptedData: string;
-  method: EncryptionMethod;
-  executionTimeMs: number;
-  fileName?: string;
-  mimeType?: string;
-}
-
-export interface FileDecryptRequestDto {
-  method: EncryptionMethod;
-  encryptedDataBase64: string;
-  key?: string;
-  privateKey?: string;
-}
-
-export interface FileDecryptResponseDto {
-  dataBase64: string;
-  method: EncryptionMethod;
-  executionTimeMs: number;
-}
+export const AsymKeyResponse = t.Object({
+    publicKey: t.String(),
+    privateKey: t.String()
+});

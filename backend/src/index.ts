@@ -1,361 +1,117 @@
-import { Elysia, t } from "elysia";
+import { Elysia } from "elysia";
 import { swagger } from "@elysiajs/swagger";
 import { cors } from "@elysiajs/cors";
-import {
-  EncryptRequestDto,
-  DecryptRequestDto,
-  AesKeyResponseDto,
-  AsymKeyPairResponseDto,
-  EncryptResponseDto,
-  DecryptResponseDto,
-} from "./dto";
-import {
-  generateAesKey,
-  encryptAes,
-  decryptAes,
-  encryptAesBinary,
-  decryptAesBinary,
-  generateRsaKeyPair,
-  encryptRsa,
-  decryptRsa,
-  generateEccKeyPair,
-  encryptEcc,
-  decryptEcc,
-  hashText,
-} from "./encryption.service";
+import { EncryptionService } from "./encryption.service";
 import { config } from "./config";
-import { logOperation, getRecentOperations } from "./db";
+import {
+    GenerateAesKeyQuery,
+    EncryptBody,
+    DecryptBody,
+    EncryptResponse,
+    DecryptResponse,
+    AesKeyResponse,
+    AsymKeyResponse
+} from "./dto";
 
 const app = new Elysia()
-  .use(
-    cors({
-      origin: "http://localhost:4200",
-      methods: ["GET", "POST", "OPTIONS"],
+    .decorate('service', new EncryptionService())
+    .use(cors({
+        origin: true, // Разрешаем все для разработки
+        methods: ["GET", "POST", "OPTIONS"],
+    }))
+    .use(swagger({
+        documentation: {
+            info: {
+                title: "Encryption API",
+                version: "1.1.0",
+                description: "API with AES Key Size Selection"
+            }
+        }
+    }))
+
+    // --- KEY GENERATION ENDPOINTS ---
+
+    // Генерация AES ключа (GET, так как это получение данных без побочных эффектов на сервере)
+    // Поддерживает query param: ?size=128|192|256
+    .get("/keys/aes", ({ query, service }) => {
+        return service.generateAesKey(query.size || 256);
+    }, {
+        query: GenerateAesKeyQuery,
+        response: AesKeyResponse,
+        detail: { summary: "Generate AES Key", tags: ["Keys"] }
     })
-  )
-  .use(
-    swagger({
-      documentation: {
-        info: {
-          title: "Encryption API",
-          version: "1.0.0",
-          description: "REST API for AES, RSA, ECC encryption and key generation"
-        }
-      }
+
+    .post("/keys/rsa", ({ service }) => {
+        return service.generateRsaKeys();
+    }, {
+        response: AsymKeyResponse,
+        detail: { summary: "Generate RSA Keys", tags: ["Keys"] }
     })
-  )
-  .post(
-    "/encrypt",
-    async ({ body }) => {
-      const req = body as EncryptRequestDto;
-      const start = performance.now();
 
-      try {
-        let encryptedText: string;
-        switch (req.method) {
-          case "AES":
-            if (!req.key) throw new Error("AES requires 'key'.");
-            encryptedText = encryptAes(req.text, req.key);
-            break;
-          case "RSA":
-            if (!req.publicKey) throw new Error("RSA requires 'publicKey' for encryption.");
-            encryptedText = encryptRsa(req.text, req.publicKey);
-            break;
-          case "ECC":
-            if (!req.publicKey) throw new Error("ECC requires 'publicKey' for encryption.");
-            encryptedText = encryptEcc(req.text, req.publicKey);
-            break;
-          default:
-            throw new Error("Unsupported method.");
+    .post("/keys/ecc", ({ service }) => {
+        return service.generateEccKeys();
+    }, {
+        response: AsymKeyResponse,
+        detail: { summary: "Generate ECC Keys", tags: ["Keys"] }
+    })
+
+    // --- OPERATIONS ENDPOINTS ---
+
+    .post("/encrypt", ({ body, service, error }) => {
+        try {
+            if (body.method === 'AES') {
+                if (!body.key) return error(400, { error: 'AES requires a key' });
+                const res = service.encryptAes(body.text, body.key);
+                return { method: 'AES', ...res };
+            }
+            if (body.method === 'RSA') {
+                if (!body.publicKey) return error(400, { error: 'RSA requires a public key' });
+                const res = service.encryptRsa(body.text, body.publicKey);
+                return { method: 'RSA', ...res };
+            }
+            if (body.method === 'ECC') {
+                if (!body.publicKey) return error(400, { error: 'ECC requires a public key' });
+                const res = service.encryptEcc(body.text, body.publicKey);
+                return { method: 'ECC', ...res };
+            }
+            return error(400, { error: 'Invalid method' });
+        } catch (e: any) {
+            return error(500, { error: e.message });
         }
+    }, {
+        body: EncryptBody,
+        response: EncryptResponse,
+        detail: { summary: "Encrypt Data", tags: ["Operations"] }
+    })
 
-        const executionTimeMs = performance.now() - start;
-        const textHash = hashText(req.text);
-
-        void logOperation({
-          method: req.method,
-          operationType: "encrypt",
-          textHash,
-          executionTimeMs,
-        });
-
-        const response: EncryptResponseDto = {
-          encryptedText,
-          method: req.method,
-          executionTimeMs,
-        };
-        return response;
-      } catch (err: any) {
-        return new Response(JSON.stringify({ error: err.message }), {
-          status: 400,
-          headers: { "Content-Type": "application/json" }
-        });
-      }
-    },
-    {
-      body: t.Object({
-        method: t.Union([t.Literal("AES"), t.Literal("RSA"), t.Literal("ECC")]),
-        text: t.String(),
-        key: t.Optional(t.String()),
-        publicKey: t.Optional(t.String())
-      }),
-      response: {
-        200: t.Object({
-          encryptedText: t.String(),
-          method: t.Union([t.Literal("AES"), t.Literal("RSA"), t.Literal("ECC")]),
-          executionTimeMs: t.Number(),
-        }),
-        400: t.Object({ error: t.String() }),
-      },
-      detail: { summary: "Encrypt text", tags: ["Encryption"] }
-    }
-  )
-  .post(
-    "/decrypt",
-    async ({ body }) => {
-      const req = body as DecryptRequestDto;
-      const start = performance.now();
-
-      try {
-        let decryptedText: string;
-        switch (req.method) {
-          case "AES":
-            if (!req.key) throw new Error("AES requires 'key'.");
-            decryptedText = decryptAes(req.encryptedText, req.key);
-            break;
-          case "RSA":
-            if (!req.privateKey) throw new Error("RSA requires 'privateKey' for decryption.");
-            decryptedText = decryptRsa(req.encryptedText, req.privateKey);
-            break;
-          case "ECC":
-            if (!req.privateKey) throw new Error("ECC requires 'privateKey' for decryption.");
-            decryptedText = decryptEcc(req.encryptedText, req.privateKey);
-            break;
-          default:
-            throw new Error("Unsupported method.");
+    .post("/decrypt", ({ body, service, error }) => {
+        try {
+            if (body.method === 'AES') {
+                if (!body.key) return error(400, { error: 'AES requires a key' });
+                const res = service.decryptAes(body.encryptedText, body.key);
+                return { method: 'AES', ...res };
+            }
+            if (body.method === 'RSA') {
+                if (!body.privateKey) return error(400, { error: 'RSA requires a private key' });
+                const res = service.decryptRsa(body.encryptedText, body.privateKey);
+                return { method: 'RSA', ...res };
+            }
+            if (body.method === 'ECC') {
+                if (!body.privateKey) return error(400, { error: 'ECC requires a private key' });
+                const res = service.decryptEcc(body.encryptedText, body.privateKey);
+                return { method: 'ECC', ...res };
+            }
+            return error(400, { error: 'Invalid method' });
+        } catch (e: any) {
+            return error(500, { error: e.message });
         }
+    }, {
+        body: DecryptBody,
+        response: DecryptResponse,
+        detail: { summary: "Decrypt Data", tags: ["Operations"] }
+    })
 
-        const executionTimeMs = performance.now() - start;
-        const textHash = hashText(decryptedText);
+    .get("/health", () => ({ status: "healthy" }));
 
-        void logOperation({
-          method: req.method,
-          operationType: "decrypt",
-          textHash,
-          executionTimeMs,
-        });
-
-        const response: DecryptResponseDto = {
-          decryptedText,
-          method: req.method,
-          executionTimeMs,
-        };
-        return response;
-      } catch (err: any) {
-        return new Response(JSON.stringify({ error: err.message }), {
-          status: 400,
-          headers: { "Content-Type": "application/json" }
-        });
-      }
-    },
-    {
-      body: t.Object({
-        method: t.Union([t.Literal("AES"), t.Literal("RSA"), t.Literal("ECC")]),
-        encryptedText: t.String(),
-        key: t.Optional(t.String()),
-        privateKey: t.Optional(t.String())
-      }),
-      response: {
-        200: t.Object({
-          decryptedText: t.String(),
-          method: t.Union([t.Literal("AES"), t.Literal("RSA"), t.Literal("ECC")]),
-          executionTimeMs: t.Number(),
-        }),
-        400: t.Object({ error: t.String() }),
-      },
-      detail: { summary: "Decrypt text", tags: ["Decryption"] }
-    }
-  )
-  .post(
-    "/generate-key/aes",
-    () => {
-      const key = generateAesKey();
-      const res: AesKeyResponseDto = { key };
-      return res;
-    },
-    {
-      response: t.Object({ key: t.String() }),
-      detail: { summary: "Generate AES symmetric key", tags: ["Key Generation"] }
-    }
-  )
-  .post(
-    "/generate-key/rsa",
-    () => {
-      const pair = generateRsaKeyPair();
-      const res: AsymKeyPairResponseDto = pair;
-      return res;
-    },
-    {
-      response: t.Object({ publicKey: t.String(), privateKey: t.String() }),
-      detail: { summary: "Generate RSA key pair", tags: ["Key Generation"] }
-    }
-  )
-  .post(
-    "/generate-key/ecc",
-    () => {
-      const pair = generateEccKeyPair();
-      const res: AsymKeyPairResponseDto = pair;
-      return res;
-    },
-    {
-      response: t.Object({ publicKey: t.String(), privateKey: t.String() }),
-      detail: { summary: "Generate ECC key pair (P-256)", tags: ["Key Generation"] }
-    }
-  )
-  .post(
-    "/encrypt-file",
-    async ({ body }) => {
-      const req = body as FileEncryptRequestDto;
-      const start = performance.now();
-
-      try {
-        if (!req.dataBase64) throw new Error("Missing file data (dataBase64).");
-
-        const binary = Buffer.from(req.dataBase64, "base64");
-        let encryptedData: string;
-
-        switch (req.method) {
-          case "AES":
-            if (!req.key) throw new Error("AES file encryption requires 'key'.");
-            encryptedData = encryptAesBinary(binary, req.key);
-            break;
-          default:
-            throw new Error("File encryption currently supports AES only.");
-        }
-
-        const executionTimeMs = performance.now() - start;
-        const textHash = hashText(req.dataBase64);
-
-        void logOperation({
-          method: req.method,
-          operationType: "encrypt",
-          textHash,
-          executionTimeMs,
-        });
-
-        const response: FileEncryptResponseDto = {
-          encryptedData,
-          method: req.method,
-          executionTimeMs,
-          fileName: req.fileName,
-          mimeType: req.mimeType,
-        };
-        return response;
-      } catch (err: any) {
-        return new Response(JSON.stringify({ error: err.message }), {
-          status: 400,
-          headers: { "Content-Type": "application/json" },
-        });
-      }
-    },
-    {
-      body: t.Object({
-        method: t.Union([t.Literal("AES"), t.Literal("RSA"), t.Literal("ECC")]),
-        dataBase64: t.String(),
-        key: t.Optional(t.String()),
-        publicKey: t.Optional(t.String()),
-        fileName: t.Optional(t.String()),
-        mimeType: t.Optional(t.String()),
-      }),
-      response: {
-        200: t.Object({
-          encryptedData: t.String(),
-          method: t.Union([t.Literal("AES"), t.Literal("RSA"), t.Literal("ECC")]),
-          executionTimeMs: t.Number(),
-          fileName: t.Optional(t.String()),
-          mimeType: t.Optional(t.String()),
-        }),
-        400: t.Object({ error: t.String() }),
-      },
-      detail: { summary: "Encrypt binary data (e.g. images) using AES", tags: ["Files"] },
-    }
-  )
-  .post(
-    "/decrypt-file",
-    async ({ body }) => {
-      const req = body as FileDecryptRequestDto;
-      const start = performance.now();
-
-      try {
-        if (!req.encryptedDataBase64) throw new Error("Missing encryptedDataBase64.");
-
-        let decryptedBinary: Buffer;
-
-        switch (req.method) {
-          case "AES":
-            if (!req.key) throw new Error("AES file decryption requires 'key'.");
-            decryptedBinary = decryptAesBinary(req.encryptedDataBase64, req.key);
-            break;
-          default:
-            throw new Error("File decryption currently supports AES only.");
-        }
-
-        const executionTimeMs = performance.now() - start;
-        const dataBase64 = decryptedBinary.toString("base64");
-        const textHash = hashText(dataBase64);
-
-        void logOperation({
-          method: req.method,
-          operationType: "decrypt",
-          textHash,
-          executionTimeMs,
-        });
-
-        const response: FileDecryptResponseDto = {
-          dataBase64,
-          method: req.method,
-          executionTimeMs,
-        };
-        return response;
-      } catch (err: any) {
-        return new Response(JSON.stringify({ error: err.message }), {
-          status: 400,
-          headers: { "Content-Type": "application/json" },
-        });
-      }
-    },
-    {
-      body: t.Object({
-        method: t.Union([t.Literal("AES"), t.Literal("RSA"), t.Literal("ECC")]),
-        encryptedDataBase64: t.String(),
-        key: t.Optional(t.String()),
-        privateKey: t.Optional(t.String()),
-      }),
-      response: {
-        200: t.Object({
-          dataBase64: t.String(),
-          method: t.Union([t.Literal("AES"), t.Literal("RSA"), t.Literal("ECC")]),
-          executionTimeMs: t.Number(),
-        }),
-        400: t.Object({ error: t.String() }),
-      },
-      detail: { summary: "Decrypt binary data (e.g. images) using AES", tags: ["Files"] },
-    }
-  )
-  .get(
-    "/operations",
-    async () => {
-      const rows = await getRecentOperations(10);
-      return rows;
-    },
-    {
-      detail: { summary: "Get recent encryption/decryption operations", tags: ["Operations"] },
-    }
-  )
-  .get("/health", () => ({ status: "ok" }), {
-    detail: { summary: "Health check", tags: ["Health"] }
-  });
-
-app.listen(config.port);
-console.log(`Encryption API listening on port ${config.port}`);
-console.log("Swagger UI available at /swagger");
+app.listen(config.port || 3000);
+console.log(`🦊 API running at ${app.server?.hostname}:${app.server?.port}`);
