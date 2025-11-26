@@ -1,0 +1,19 @@
+{
+  "name": "encryption-backend",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "bun run src/index.ts",
+    "start": "bun run src/index.ts"
+  },
+  "dependencies": {
+    "elysia": "^1.0.0",
+    "@elysiajs/swagger": "^1.0.0",
+    "@elysiajs/cors": "^1.0.0",
+    "pg": "^8.11.0",
+    "elliptic": "^6.5.4"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.0"
+  }
+}

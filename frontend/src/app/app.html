@@ -1,0 +1,210 @@
+<div class="app-container">
+  <header class="app-header">
+    <div class="brand">
+      <h1>{{ title() }}</h1>
+      <p>Try AES, RSA and ECC in one clean interface.</p>
+    </div>
+    <button class="secondary" (click)="openKeyModal()">What is a key?</button>
+  </header>
+
+  <main class="app-main">
+    <section class="sidebar">
+      <div class="hero">
+        <p class="pill">AES · RSA · ECC · Modern crypto playground</p>
+        <h2>Secure text encryption in your browser.</h2>
+        <p class="subtitle">
+          Pick an algorithm, generate keys and experiment with real-world encryption
+          patterns. Nothing is stored except anonymous performance logs.
+        </p>
+        <ul class="bullets">
+          <li>Symmetric AES-256-GCM for fast bulk encryption</li>
+          <li>RSA key pairs for classical public-key workflows</li>
+          <li>ECC P-256 with ECIES-style encryption</li>
+        </ul>
+      </div>
+
+      <section class="algorithms">
+        <h3>Choose an algorithm</h3>
+        <div class="cards">
+        @for (alg of algorithms(); track alg.id) {
+          <div
+            class="card"
+            [class.active]="alg.id === selectedMethod()"
+            (click)="setMethod(alg.id)"
+          >
+            <div class="card-header">
+              <h3>{{ alg.name }}</h3>
+              <span class="badge">{{ alg.id }}</span>
+            </div>
+            <p class="short">{{ alg.short }}</p>
+            <div class="card-actions">
+              <button
+                class="ghost"
+                (click)="openAlgorithmModal(alg); $event.stopPropagation()"
+              >
+                Learn more
+              </button>
+            </div>
+          </div>
+        }
+      </div>
+      </section>
+    </section>
+
+    <section class="panel">
+      <div class="panel-header">
+        <div *ngIf="selectedAlgorithm() as alg">
+          <h2>Encrypt / Decrypt</h2>
+          <p class="panel-subtitle">
+            <span class="alg-label">{{ alg.name }}</span>
+            {{ alg.short }}
+          </p>
+        </div>
+        <div class="panel-tags">
+          <span class="tag" *ngIf="selectedMethod() === 'AES'">Symmetric</span>
+          <span class="tag" *ngIf="selectedMethod() !== 'AES'">Asymmetric</span>
+        </div>
+      </div>
+
+      <div class="panel-grid">
+        <div class="panel-column">
+          <label>Plain text</label>
+          <textarea
+            [ngModel]="plaintext()"
+            (ngModelChange)="plaintext.set($event)"
+            placeholder="Type text to encrypt or result of decryption"
+          ></textarea>
+        </div>
+
+        <div class="panel-column">
+          <label>Encrypted text</label>
+          <textarea
+            [ngModel]="encryptedText()"
+            (ngModelChange)="encryptedText.set($event)"
+            placeholder="Encrypted output or input for decryption"
+          ></textarea>
+        </div>
+      </div>
+
+      <div class="keys-section">
+        <h3>Keys</h3>
+
+        <div *ngIf="selectedMethod() === 'AES'" class="key-row">
+          <label>AES Key (base64)</label>
+          <textarea
+            [ngModel]="aesKey()"
+            (ngModelChange)="aesKey.set($event)"
+            placeholder="Generated or custom AES key"
+          ></textarea>
+          <button (click)="onGenerateAesKey()">Generate AES Key</button>
+        </div>
+
+        <div *ngIf="selectedMethod() === 'RSA'" class="key-row two-col">
+          <div>
+            <label>RSA Public Key (PEM)</label>
+            <textarea
+              [ngModel]="rsaPublicKey()"
+              (ngModelChange)="rsaPublicKey.set($event)"
+              placeholder="Public key used for encryption"
+            ></textarea>
+          </div>
+          <div>
+            <label>RSA Private Key (PEM)</label>
+            <textarea
+              [ngModel]="rsaPrivateKey()"
+              (ngModelChange)="rsaPrivateKey.set($event)"
+              placeholder="Private key used for decryption"
+            ></textarea>
+          </div>
+          <button (click)="onGenerateRsaKeys()">Generate RSA Keys</button>
+        </div>
+
+        <div *ngIf="selectedMethod() === 'ECC'" class="key-row two-col">
+          <div>
+            <label>ECC Public Key (hex, compressed)</label>
+            <textarea
+              [ngModel]="eccPublicKey()"
+              (ngModelChange)="eccPublicKey.set($event)"
+              placeholder="Public key used for encryption"
+            ></textarea>
+          </div>
+          <div>
+            <label>ECC Private Key (hex)</label>
+            <textarea
+              [ngModel]="eccPrivateKey()"
+              (ngModelChange)="eccPrivateKey.set($event)"
+              placeholder="Private key used for decryption"
+            ></textarea>
+          </div>
+          <button (click)="onGenerateEccKeys()">Generate ECC Keys</button>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button class="primary" (click)="onEncrypt()" [disabled]="isLoading()">
+          Encrypt
+        </button>
+        <button class="outline" (click)="onDecrypt()" [disabled]="isLoading()">
+          Decrypt
+        </button>
+      </div>
+
+      <div class="messages">
+        <div class="error" *ngIf="errorMessage()">{{ errorMessage() }}</div>
+        <div class="info" *ngIf="infoMessage()">{{ infoMessage() }}</div>
+      </div>
+    </section>
+  </main>
+
+  <div class="modal-backdrop" *ngIf="showAlgorithmModal()">
+    <div class="modal">
+      <header>
+        <h2>{{ activeAlgorithmInfo()?.name }}</h2>
+        <button class="icon" (click)="closeAlgorithmModal()">×</button>
+      </header>
+      <section>
+        <p>{{ activeAlgorithmInfo()?.description }}</p>
+        <h3>How it works</h3>
+        <p>{{ activeAlgorithmInfo()?.howItWorks }}</p>
+
+        <div class="modal-columns">
+          <div>
+            <h4>Pros</h4>
+            <ul>
+              <li *ngFor="let p of activeAlgorithmInfo()?.pros">{{ p }}</li>
+            </ul>
+          </div>
+          <div>
+            <h4>Cons</h4>
+            <ul>
+              <li *ngFor="let c of activeAlgorithmInfo()?.cons">{{ c }}</li>
+            </ul>
+          </div>
+        </div>
+
+        <h4>Common uses</h4>
+        <ul class="tags">
+          <li *ngFor="let u of activeAlgorithmInfo()?.uses">{{ u }}</li>
+        </ul>
+      </section>
+      <footer>
+        <button class="primary" (click)="closeAlgorithmModal()">Got it</button>
+      </footer>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" *ngIf="showKeyModal()">
+    <div class="modal">
+      <header>
+        <h2>{{ keyExplanation.title }}</h2>
+        <button class="icon" (click)="closeKeyModal()">×</button>
+      </header>
+      <section>
+        <p *ngFor="let p of keyExplanation.paragraphs">{{ p }}</p>
+      </section>
+      <footer>
+        <button class="primary" (click)="closeKeyModal()">Close</button>
+      </footer>
+    </div>
+  </div>
+</div>
