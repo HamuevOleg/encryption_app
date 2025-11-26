@@ -34,3 +34,42 @@ export interface AsymKeyPairResponse {
   publicKey: string;
   privateKey: string;
 }
+
+export interface FileEncryptRequest {
+  method: EncryptionMethod;
+  dataBase64: string;
+  key?: string;
+  publicKey?: string;
+  fileName?: string;
+  mimeType?: string;
+}
+
+export interface FileEncryptResponse {
+  encryptedData: string;
+  method: EncryptionMethod;
+  executionTimeMs: number;
+  fileName?: string;
+  mimeType?: string;
+}
+
+export interface FileDecryptRequest {
+  method: EncryptionMethod;
+  encryptedDataBase64: string;
+  key?: string;
+  privateKey?: string;
+}
+
+export interface FileDecryptResponse {
+  dataBase64: string;
+  method: EncryptionMethod;
+  executionTimeMs: number;
+}
+
+export interface OperationLog {
+  id: number;
+  method: EncryptionMethod;
+  operation_type: 'encrypt' | 'decrypt';
+  text_hash: string;
+  execution_time_ms: number;
+  created_at: string;
+}

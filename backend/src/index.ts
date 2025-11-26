@@ -13,16 +13,18 @@ import {
   generateAesKey,
   encryptAes,
   decryptAes,
+  encryptAesBinary,
+  decryptAesBinary,
   generateRsaKeyPair,
   encryptRsa,
   decryptRsa,
   generateEccKeyPair,
   encryptEcc,
   decryptEcc,
-  hashText
+  hashText,
 } from "./encryption.service";
 import { config } from "./config";
-import { logOperation } from "./db";
+import { logOperation, getRecentOperations } from "./db";
 
 const app = new Elysia()
   .use(
@@ -208,6 +210,146 @@ const app = new Elysia()
     {
       response: t.Object({ publicKey: t.String(), privateKey: t.String() }),
       detail: { summary: "Generate ECC key pair (P-256)", tags: ["Key Generation"] }
+    }
+  )
+  .post(
+    "/encrypt-file",
+    async ({ body }) => {
+      const req = body as FileEncryptRequestDto;
+      const start = performance.now();
+
+      try {
+        if (!req.dataBase64) throw new Error("Missing file data (dataBase64).");
+
+        const binary = Buffer.from(req.dataBase64, "base64");
+        let encryptedData: string;
+
+        switch (req.method) {
+          case "AES":
+            if (!req.key) throw new Error("AES file encryption requires 'key'.");
+            encryptedData = encryptAesBinary(binary, req.key);
+            break;
+          default:
+            throw new Error("File encryption currently supports AES only.");
+        }
+
+        const executionTimeMs = performance.now() - start;
+        const textHash = hashText(req.dataBase64);
+
+        void logOperation({
+          method: req.method,
+          operationType: "encrypt",
+          textHash,
+          executionTimeMs,
+        });
+
+        const response: FileEncryptResponseDto = {
+          encryptedData,
+          method: req.method,
+          executionTimeMs,
+          fileName: req.fileName,
+          mimeType: req.mimeType,
+        };
+        return response;
+      } catch (err: any) {
+        return new Response(JSON.stringify({ error: err.message }), {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+    },
+    {
+      body: t.Object({
+        method: t.Union([t.Literal("AES"), t.Literal("RSA"), t.Literal("ECC")]),
+        dataBase64: t.String(),
+        key: t.Optional(t.String()),
+        publicKey: t.Optional(t.String()),
+        fileName: t.Optional(t.String()),
+        mimeType: t.Optional(t.String()),
+      }),
+      response: {
+        200: t.Object({
+          encryptedData: t.String(),
+          method: t.Union([t.Literal("AES"), t.Literal("RSA"), t.Literal("ECC")]),
+          executionTimeMs: t.Number(),
+          fileName: t.Optional(t.String()),
+          mimeType: t.Optional(t.String()),
+        }),
+        400: t.Object({ error: t.String() }),
+      },
+      detail: { summary: "Encrypt binary data (e.g. images) using AES", tags: ["Files"] },
+    }
+  )
+  .post(
+    "/decrypt-file",
+    async ({ body }) => {
+      const req = body as FileDecryptRequestDto;
+      const start = performance.now();
+
+      try {
+        if (!req.encryptedDataBase64) throw new Error("Missing encryptedDataBase64.");
+
+        let decryptedBinary: Buffer;
+
+        switch (req.method) {
+          case "AES":
+            if (!req.key) throw new Error("AES file decryption requires 'key'.");
+            decryptedBinary = decryptAesBinary(req.encryptedDataBase64, req.key);
+            break;
+          default:
+            throw new Error("File decryption currently supports AES only.");
+        }
+
+        const executionTimeMs = performance.now() - start;
+        const dataBase64 = decryptedBinary.toString("base64");
+        const textHash = hashText(dataBase64);
+
+        void logOperation({
+          method: req.method,
+          operationType: "decrypt",
+          textHash,
+          executionTimeMs,
+        });
+
+        const response: FileDecryptResponseDto = {
+          dataBase64,
+          method: req.method,
+          executionTimeMs,
+        };
+        return response;
+      } catch (err: any) {
+        return new Response(JSON.stringify({ error: err.message }), {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+    },
+    {
+      body: t.Object({
+        method: t.Union([t.Literal("AES"), t.Literal("RSA"), t.Literal("ECC")]),
+        encryptedDataBase64: t.String(),
+        key: t.Optional(t.String()),
+        privateKey: t.Optional(t.String()),
+      }),
+      response: {
+        200: t.Object({
+          dataBase64: t.String(),
+          method: t.Union([t.Literal("AES"), t.Literal("RSA"), t.Literal("ECC")]),
+          executionTimeMs: t.Number(),
+        }),
+        400: t.Object({ error: t.String() }),
+      },
+      detail: { summary: "Decrypt binary data (e.g. images) using AES", tags: ["Files"] },
+    }
+  )
+  .get(
+    "/operations",
+    async () => {
+      const rows = await getRecentOperations(10);
+      return rows;
+    },
+    {
+      detail: { summary: "Get recent encryption/decryption operations", tags: ["Operations"] },
     }
   )
   .get("/health", () => ({ status: "ok" }), {

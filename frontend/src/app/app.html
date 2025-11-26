@@ -2,78 +2,50 @@
   <header class="app-header">
     <div class="brand">
       <h1>{{ title() }}</h1>
-      <p>Try AES, RSA and ECC in one clean interface.</p>
+      <p>Secure encryption using AES, RSA & ECC protocols</p>
     </div>
-    <button class="secondary" (click)="openKeyModal()">What is a key?</button>
+    <button class="secondary" (click)="openKeyModal()">
+      <span class="icon">?</span> What is a key?
+    </button>
   </header>
 
   <main class="app-main">
     <section class="sidebar">
       <section class="algorithms">
-        <h3>Choose an algorithm</h3>
+        <h3>Select Protocol</h3>
         <div class="cards">
           @for (alg of algorithms(); track alg.id) {
-            <div
-              class="card"
-              [class.active]="alg.id === selectedMethod()"
-              (click)="setMethod(alg.id)"
-            >
+            <div class="card" [class.active]="alg.id === selectedMethod()" (click)="setMethod(alg.id)">
               <div class="card-header">
                 <h3>{{ alg.name }}</h3>
                 <span class="badge">{{ alg.id }}</span>
               </div>
               <p class="short">{{ alg.short }}</p>
               <div class="card-actions">
-                <button
-                  class="ghost"
-                  (click)="openAlgorithmModal(alg); $event.stopPropagation()"
-                >
-                  Learn more
-                </button>
+                <button class="ghost" (click)="openAlgorithmModal(alg); $event.stopPropagation()">View Details →</button>
               </div>
             </div>
           }
         </div>
       </section>
-
-      <div class="info-card">
-        <h4>Quick Info</h4>
-        <ul class="info-list">
-          <li><strong>AES</strong> – fast symmetric encryption</li>
-          <li><strong>RSA</strong> – classic public-key cryptography</li>
-          <li><strong>ECC</strong> – modern elliptic-curve cryptography</li>
-        </ul>
-      </div>
     </section>
 
     <section class="panel">
       <div class="panel-header">
         <div *ngIf="selectedAlgorithm() as alg">
-          <h2>{{ alg.name }} - {{ selectedMethod() === 'AES' ? 'Symmetric' : 'Asymmetric' }} Encryption</h2>
-          <p class="panel-subtitle">{{ alg.short }}</p>
+          <h2>{{ alg.name }} Operations</h2>
+          <p class="panel-subtitle">Interactive Visualization & IO</p>
         </div>
       </div>
 
-      <!-- Keys Section First -->
       <div class="keys-section-top">
-        <div class="section-title">
-          <h3>Keys</h3>
-          <span class="hint">Generate or paste your keys here</span>
-        </div>
+        <div class="section-title"><h3>Security Keys</h3></div>
 
         <div *ngIf="selectedMethod() === 'AES'" class="key-row-horizontal">
           <div class="key-input-wrapper">
-            <label>
-              AES Key (base64)
-              <span class="key-example">Example: {{ aesKeyExample }}</span>
-            </label>
+            <label>AES Secret Key (Base64)</label>
             <div class="input-with-button">
-              <textarea
-                [ngModel]="aesKey()"
-                (ngModelChange)="aesKey.set($event)"
-                placeholder="Paste AES key or generate new one"
-                rows="2"
-              ></textarea>
+              <textarea [ngModel]="aesKey()" (ngModelChange)="aesKey.set($event)" placeholder="Generate or paste key..." rows="2" spellcheck="false"></textarea>
               <button class="generate-btn" (click)="onGenerateAesKey()">Generate</button>
             </div>
           </div>
@@ -81,170 +53,103 @@
 
         <div *ngIf="selectedMethod() === 'RSA'" class="key-row-grid">
           <div class="key-input-wrapper">
-            <label>
-              RSA Public Key (PEM)
-              <span class="key-example">Used for encryption</span>
-            </label>
-            <textarea
-              [ngModel]="rsaPublicKey()"
-              (ngModelChange)="rsaPublicKey.set($event)"
-              placeholder="-----BEGIN PUBLIC KEY-----"
-              rows="3"
-            ></textarea>
+            <label>RSA Public Key</label>
+            <textarea [ngModel]="rsaPublicKey()" (ngModelChange)="rsaPublicKey.set($event)" placeholder="-----BEGIN PUBLIC KEY-----" rows="3" spellcheck="false"></textarea>
           </div>
           <div class="key-input-wrapper">
-            <label>
-              RSA Private Key (PEM)
-              <span class="key-example">Used for decryption</span>
-            </label>
-            <textarea
-              [ngModel]="rsaPrivateKey()"
-              (ngModelChange)="rsaPrivateKey.set($event)"
-              placeholder="-----BEGIN PRIVATE KEY-----"
-              rows="3"
-            ></textarea>
+            <label>RSA Private Key</label>
+            <textarea [ngModel]="rsaPrivateKey()" (ngModelChange)="rsaPrivateKey.set($event)" placeholder="-----BEGIN PRIVATE KEY-----" rows="3" spellcheck="false"></textarea>
           </div>
           <button class="generate-btn-full" (click)="onGenerateRsaKeys()">Generate RSA Keys</button>
         </div>
 
         <div *ngIf="selectedMethod() === 'ECC'" class="key-row-grid">
           <div class="key-input-wrapper">
-            <label>
-              ECC Public Key (hex)
-              <span class="key-example">Compressed format</span>
-            </label>
-            <textarea
-              [ngModel]="eccPublicKey()"
-              (ngModelChange)="eccPublicKey.set($event)"
-              placeholder="02a1b2c3d4..."
-              rows="3"
-            ></textarea>
+            <label>ECC Public Key</label>
+            <textarea [ngModel]="eccPublicKey()" (ngModelChange)="eccPublicKey.set($event)" placeholder="Hex string..." rows="2" spellcheck="false"></textarea>
           </div>
           <div class="key-input-wrapper">
-            <label>
-              ECC Private Key (hex)
-              <span class="key-example">Keep secret!</span>
-            </label>
-            <textarea
-              [ngModel]="eccPrivateKey()"
-              (ngModelChange)="eccPrivateKey.set($event)"
-              placeholder="1234567890abcdef..."
-              rows="3"
-            ></textarea>
+            <label>ECC Private Key</label>
+            <textarea [ngModel]="eccPrivateKey()" (ngModelChange)="eccPrivateKey.set($event)" placeholder="Hex string..." rows="2" spellcheck="false"></textarea>
           </div>
           <button class="generate-btn-full" (click)="onGenerateEccKeys()">Generate ECC Keys</button>
         </div>
       </div>
 
-      <!-- Input/Output Section -->
-      <div class="io-section">
-        <div class="section-title">
-          <h3>Text Input & Output</h3>
-          <span class="hint">Enter text to encrypt or see decryption results</span>
+      <div class="visualizer-section" [class.active]="isVisualizing() || encryptedText()">
+        <div class="section-title"><h3>Encryption Logic Flow</h3></div>
+        <div class="flow-diagram">
+          <div class="diagram-container aes-flow" *ngIf="selectedMethod() === 'AES'">
+            <div class="node input">Data Block</div><div class="arrow">↓</div>
+            <div class="node step" [class.pulse]="isLoading()">SubBytes<br><span class="small">S-Box</span></div><div class="arrow">↓</div>
+            <div class="node step" [class.pulse]="isLoading()">ShiftRows<br><span class="small">Permutation</span></div><div class="arrow">↓</div>
+            <div class="node step" [class.pulse]="isLoading()">MixColumns<br><span class="small">Matrix Mult.</span></div><div class="arrow">↓</div>
+            <div class="node output">Cipher Block</div>
+          </div>
+          <div class="diagram-container rsa-flow" *ngIf="selectedMethod() === 'RSA'">
+            <div class="math-block"><span class="label">Encryption</span><div class="formula" [class.glow]="isLoading() && lastOperation() === 'encrypt'">C = M<sup>e</sup> <span class="op">mod</span> n</div></div>
+            <div class="divider"></div>
+            <div class="math-block"><span class="label">Decryption</span><div class="formula" [class.glow]="isLoading() && lastOperation() === 'decrypt'">M = C<sup>d</sup> <span class="op">mod</span> n</div></div>
+          </div>
+          <div class="diagram-container ecc-flow" *ngIf="selectedMethod() === 'ECC'">
+            <div class="curve-viz">
+              <svg viewBox="0 0 100 100" class="curve-svg">
+                <path d="M10,50 Q30,10 50,50 T90,50" fill="none" stroke="var(--primary)" stroke-width="2" />
+                <circle cx="30" cy="30" r="3" fill="var(--secondary)" class="point p" [class.moving]="isLoading()"/>
+              </svg>
+              <div class="caption">y² = x³ + ax + b</div>
+            </div>
+          </div>
         </div>
 
+        <div class="bit-stream-container">
+          <div class="bit-row"><label>Input Bits</label><div class="bits">{{ plainBits() || 'Waiting for input...' }}</div></div>
+          <div class="process-line" [class.active]="isLoading()"></div>
+          <div class="bit-row"><label>Output Bits</label><div class="bits cipher">{{ cipherBits() || 'Waiting for result...' }}</div></div>
+        </div>
+      </div>
+
+      <div class="io-section">
         <div class="io-grid">
+
           <div class="io-column input-column">
-            <label>
-              <span class="label-icon"></span>
-              Input Text
-            </label>
-            <textarea
-              [ngModel]="plaintext()"
-              (ngModelChange)="plaintext.set($event)"
-              placeholder="Type your message here..."
-              rows="6"
-            ></textarea>
+            <label>Plain Text / Input</label>
+            <div class="input-wrapper-relative">
+              <textarea [ngModel]="plaintext()" (ngModelChange)="plaintext.set($event)" placeholder="Enter text here..." rows="8"></textarea>
+
+              <button *ngIf="showDecryptCopy()" class="copy-btn-floating" (click)="copyResult()">
+                <span class="icon">📋</span> {{ copyButtonLabel() }}
+              </button>
+            </div>
           </div>
 
           <div class="io-column output-column">
-            <label>
-              <span class="label-icon"></span>
-              Encrypted Output
-            </label>
-            <textarea
-              [ngModel]="encryptedText()"
-              (ngModelChange)="encryptedText.set($event)"
-              placeholder="Encrypted text will appear here..."
-              rows="6"
-              readonly
-            ></textarea>
+            <label>Cipher Text / Result</label>
+            <div class="input-wrapper-relative">
+              <textarea [ngModel]="encryptedText()" (ngModelChange)="encryptedText.set($event)" placeholder="Result will appear here..." rows="8" readonly></textarea>
+
+              <button *ngIf="showEncryptCopy()" class="copy-btn-floating" (click)="copyResult()">
+                <span class="icon">📋</span> {{ copyButtonLabel() }}
+              </button>
+            </div>
           </div>
+
         </div>
       </div>
 
       <div class="actions">
-        <button class="primary" (click)="onEncrypt()" [disabled]="isLoading()">
-          Encrypt
-        </button>
-        <button class="outline" (click)="onDecrypt()" [disabled]="isLoading()">
-          Decrypt
-        </button>
+        <button class="primary" (click)="onEncrypt()" [disabled]="isLoading()">{{ isLoading() && lastOperation() === 'encrypt' ? 'Encrypting...' : 'Encrypt' }}</button>
+        <button class="outline" (click)="onDecrypt()" [disabled]="isLoading()">{{ isLoading() && lastOperation() === 'decrypt' ? 'Decrypting...' : 'Decrypt' }}</button>
       </div>
 
       <div class="messages">
         <div class="error" *ngIf="errorMessage()">{{ errorMessage() }}</div>
         <div class="info" *ngIf="infoMessage()">{{ infoMessage() }}</div>
-        <div class="meta" *ngIf="lastExecutionTimeMs() !== null && lastOperation() !== null">
-          <span>
-            Client sent a REST {{ lastOperation() }} request to the Elysia.js backend and got a
-            response in {{ lastExecutionTimeMs() }} ms.
-          </span>
-        </div>
+        <div class="meta" *ngIf="lastExecutionTimeMs() !== null"><span>Process Time: {{ lastExecutionTimeMs() }}ms</span></div>
       </div>
     </section>
   </main>
 
-  <!-- Modals remain the same -->
-  <div class="modal-backdrop" *ngIf="showAlgorithmModal()">
-    <div class="modal">
-      <header>
-        <h2>{{ activeAlgorithmInfo()?.name }}</h2>
-        <button class="icon" (click)="closeAlgorithmModal()">×</button>
-      </header>
-      <section>
-        <p>{{ activeAlgorithmInfo()?.description }}</p>
-        <h3>How it works</h3>
-        <p>{{ activeAlgorithmInfo()?.howItWorks }}</p>
-
-        <div class="modal-columns">
-          <div>
-            <h4>Pros</h4>
-            <ul>
-              <li *ngFor="let p of activeAlgorithmInfo()?.pros">{{ p }}</li>
-            </ul>
-          </div>
-          <div>
-            <h4>Cons</h4>
-            <ul>
-              <li *ngFor="let c of activeAlgorithmInfo()?.cons">{{ c }}</li>
-            </ul>
-          </div>
-        </div>
-
-        <h4>Common uses</h4>
-        <ul class="tags">
-          <li *ngFor="let u of activeAlgorithmInfo()?.uses">{{ u }}</li>
-        </ul>
-      </section>
-      <footer>
-        <button class="primary" (click)="closeAlgorithmModal()">Got it</button>
-      </footer>
-    </div>
-  </div>
-
-  <div class="modal-backdrop" *ngIf="showKeyModal()">
-    <div class="modal">
-      <header>
-        <h2>{{ keyExplanation.title }}</h2>
-        <button class="icon" (click)="closeKeyModal()">×</button>
-      </header>
-      <section>
-        <p *ngFor="let p of keyExplanation.paragraphs">{{ p }}</p>
-      </section>
-      <footer>
-        <button class="primary" (click)="closeKeyModal()">Close</button>
-      </footer>
-    </div>
-  </div>
+  <div class="modal-backdrop" *ngIf="showAlgorithmModal()" (click)="closeAlgorithmModal()"><div class="modal" (click)="$event.stopPropagation()"><header><h2>{{ activeAlgorithmInfo()?.name }}</h2><button class="icon" (click)="closeAlgorithmModal()">✕</button></header><section><p>{{ activeAlgorithmInfo()?.description }}</p></section></div></div>
+  <div class="modal-backdrop" *ngIf="showKeyModal()" (click)="closeKeyModal()"><div class="modal" (click)="$event.stopPropagation()"><header><h2>Key Info</h2><button class="icon" (click)="closeKeyModal()">✕</button></header><section><p>Keys are fundamental for cryptography...</p></section></div></div>
 </div>

@@ -31,3 +31,19 @@ export async function logOperation(params: {
     client.release();
   }
 }
+
+export async function getRecentOperations(limit = 10) {
+  const client = await pool.connect();
+  try {
+    const result = await client.query(
+      `SELECT id, method, operation_type, text_hash, execution_time_ms, created_at
+       FROM operation_logs
+       ORDER BY created_at DESC
+       LIMIT $1`,
+      [limit]
+    );
+    return result.rows;
+  } finally {
+    client.release();
+  }
+}

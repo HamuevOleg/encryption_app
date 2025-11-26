@@ -1,1 +1,49 @@
-/* You can add global styles to this file, and also import other style files */
+/* fonts */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+:root {
+  /* Cyber Dark Palette */
+  --bg-deep: #050507;
+  --bg-surface: rgba(20, 20, 35, 0.6);
+  --bg-glass: rgba(255, 255, 255, 0.03);
+
+  --primary: #00f2ff; /* Neon Cyan */
+  --primary-dim: rgba(0, 242, 255, 0.1);
+  --secondary: #7000ff; /* Neon Purple */
+  --secondary-dim: rgba(112, 0, 255, 0.1);
+
+  --text-main: #ffffff;
+  --text-muted: #8b9bb4;
+
+  --border-light: rgba(255, 255, 255, 0.08);
+  --shadow-glow: 0 0 20px rgba(0, 242, 255, 0.15);
+
+  --radius-sm: 8px;
+  --radius-md: 16px;
+  --radius-lg: 24px;
+}
+
+body {
+  margin: 0;
+  font-family: 'Inter', sans-serif;
+  background-color: var(--bg-deep);
+  color: var(--text-main);
+  overflow-x: hidden;
+  min-height: 100vh;
+}
+
+/* Animated Background Orbs */
+body::before, body::after {
+  content: '';
+  position: fixed;
+  width: 60vw; height: 60vw;
+  border-radius: 50%;
+  filter: blur(100px);
+  z-index: -1;
+  opacity: 0.3;
+  animation: float 15s infinite alternate ease-in-out;
+}
+body::before { background: radial-gradient(circle, var(--secondary), transparent 70%); top: -20%; left: -20%; }
+body::after { background: radial-gradient(circle, var(--primary), transparent 70%); bottom: -20%; right: -20%; animation-delay: -7s; }
+
+@keyframes float { 0% { transform: translate(0, 0) scale(1); } 100% { transform: translate(50px, 80px) scale(1.1); } }

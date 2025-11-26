@@ -8,6 +8,11 @@ import {
   DecryptResponse,
   AesKeyResponse,
   AsymKeyPairResponse,
+  FileEncryptRequest,
+  FileEncryptResponse,
+  FileDecryptRequest,
+  FileDecryptResponse,
+  OperationLog,
 } from '../models/encryption.models';
 import { environment } from '../../environments/environment';
 
@@ -34,5 +39,17 @@ export class EncryptionApiService {
 
   generateEccKeys(): Observable<AsymKeyPairResponse> {
     return this.http.post<AsymKeyPairResponse>(`${this.baseUrl}/generate-key/ecc`, {});
+  }
+
+  encryptFile(body: FileEncryptRequest): Observable<FileEncryptResponse> {
+    return this.http.post<FileEncryptResponse>(`${this.baseUrl}/encrypt-file`, body);
+  }
+
+  decryptFile(body: FileDecryptRequest): Observable<FileDecryptResponse> {
+    return this.http.post<FileDecryptResponse>(`${this.baseUrl}/decrypt-file`, body);
+  }
+
+  getRecentOperations(limit = 10): Observable<OperationLog[]> {
+    return this.http.get<OperationLog[]>(`${this.baseUrl}/operations`);
   }
 }
