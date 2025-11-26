@@ -6,6 +6,8 @@ import { EncryptionApiService } from './services/encryption-api.service';
 import {
   EncryptionMethod,
   AsymKeyPairResponse,
+  EncryptResponse,
+  DecryptResponse,
 } from './models/encryption.models';
 
 interface AlgorithmInfo {
@@ -42,10 +44,15 @@ export class App {
   readonly isLoading = signal(false);
   readonly errorMessage = signal('');
   readonly infoMessage = signal('');
+  readonly lastExecutionTimeMs = signal<number | null>(null);
+  readonly lastOperation = signal<'encrypt' | 'decrypt' | null>(null);
 
   readonly showAlgorithmModal = signal(false);
   readonly showKeyModal = signal(false);
   readonly activeAlgorithmInfo = signal<AlgorithmInfo | undefined>(undefined);
+
+  // Example key for display
+  readonly aesKeyExample = 'a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6...';
 
   readonly algorithms = signal<AlgorithmInfo[]>([
     {
@@ -87,7 +94,7 @@ export class App {
       description:
         'ECC uses elliptic curves to provide strong security with smaller keys than RSA.',
       howItWorks:
-        'You also have a public/private key pair, but the math is based on elliptic curves. It’s usually combined with AES in a scheme similar to ECIES.',
+        "You also have a public/private key pair, but the math is based on elliptic curves. It's usually combined with AES in a scheme similar to ECIES.",
       pros: [
         'Smaller keys for similar security',
         'Efficient for mobile and low‑power devices',
@@ -145,6 +152,8 @@ export class App {
   onEncrypt(): void {
     this.errorMessage.set('');
     this.infoMessage.set('');
+    this.lastExecutionTimeMs.set(null);
+    this.lastOperation.set(null);
 
     if (!this.plaintext().trim()) {
       this.errorMessage.set('Please enter some text to encrypt.');
@@ -180,8 +189,13 @@ export class App {
 
     this.isLoading.set(true);
     this.api.encrypt(body).subscribe({
-      next: (res) => {
+      next: (res: EncryptResponse) => {
         this.encryptedText.set(res.encryptedText);
+        this.lastExecutionTimeMs.set(res.executionTimeMs);
+        this.lastOperation.set('encrypt');
+        this.infoMessage.set(
+          `Server encrypted the text using ${res.method} in ${res.executionTimeMs.toFixed(1)} ms.`
+        );
         this.isLoading.set(false);
       },
       error: (err) => {
@@ -194,6 +208,8 @@ export class App {
   onDecrypt(): void {
     this.errorMessage.set('');
     this.infoMessage.set('');
+    this.lastExecutionTimeMs.set(null);
+    this.lastOperation.set(null);
 
     if (!this.encryptedText().trim()) {
       this.errorMessage.set('Please provide encrypted text to decrypt.');
@@ -229,8 +245,13 @@ export class App {
 
     this.isLoading.set(true);
     this.api.decrypt(body).subscribe({
-      next: (res) => {
+      next: (res: DecryptResponse) => {
         this.plaintext.set(res.decryptedText);
+        this.lastExecutionTimeMs.set(res.executionTimeMs);
+        this.lastOperation.set('decrypt');
+        this.infoMessage.set(
+          `Server decrypted the text using ${res.method} in ${res.executionTimeMs.toFixed(1)} ms.`
+        );
         this.isLoading.set(false);
       },
       error: (err) => {
@@ -246,7 +267,7 @@ export class App {
     this.api.generateAesKey().subscribe({
       next: (res) => {
         this.aesKey.set(res.key);
-        this.infoMessage.set('New AES key generated.');
+        this.infoMessage.set('New AES key generated successfully!');
         this.isLoading.set(false);
       },
       error: () => {
@@ -263,7 +284,7 @@ export class App {
       next: (res: AsymKeyPairResponse) => {
         this.rsaPublicKey.set(res.publicKey);
         this.rsaPrivateKey.set(res.privateKey);
-        this.infoMessage.set('New RSA key pair generated.');
+        this.infoMessage.set('New RSA key pair generated successfully!');
         this.isLoading.set(false);
       },
       error: () => {
@@ -280,7 +301,7 @@ export class App {
       next: (res: AsymKeyPairResponse) => {
         this.eccPublicKey.set(res.publicKey);
         this.eccPrivateKey.set(res.privateKey);
-        this.infoMessage.set('New ECC key pair generated.');
+        this.infoMessage.set('New ECC key pair generated successfully!');
         this.isLoading.set(false);
       },
       error: () => {

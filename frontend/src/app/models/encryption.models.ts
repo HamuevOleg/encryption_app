@@ -9,6 +9,8 @@ export interface EncryptRequest {
 
 export interface EncryptResponse {
   encryptedText: string;
+  method: EncryptionMethod;
+  executionTimeMs: number;
 }
 
 export interface DecryptRequest {
@@ -20,6 +22,8 @@ export interface DecryptRequest {
 
 export interface DecryptResponse {
   decryptedText: string;
+  method: EncryptionMethod;
+  executionTimeMs: number;
 }
 
 export interface AesKeyResponse {

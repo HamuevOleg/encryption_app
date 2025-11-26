@@ -5,7 +5,9 @@ import {
   EncryptRequestDto,
   DecryptRequestDto,
   AesKeyResponseDto,
-  AsymKeyPairResponseDto
+  AsymKeyPairResponseDto,
+  EncryptResponseDto,
+  DecryptResponseDto,
 } from "./dto";
 import {
   generateAesKey,
@@ -72,10 +74,15 @@ const app = new Elysia()
           method: req.method,
           operationType: "encrypt",
           textHash,
-          executionTimeMs
+          executionTimeMs,
         });
 
-        return { encryptedText };
+        const response: EncryptResponseDto = {
+          encryptedText,
+          method: req.method,
+          executionTimeMs,
+        };
+        return response;
       } catch (err: any) {
         return new Response(JSON.stringify({ error: err.message }), {
           status: 400,
@@ -91,8 +98,12 @@ const app = new Elysia()
         publicKey: t.Optional(t.String())
       }),
       response: {
-        200: t.Object({ encryptedText: t.String() }),
-        400: t.Object({ error: t.String() })
+        200: t.Object({
+          encryptedText: t.String(),
+          method: t.Union([t.Literal("AES"), t.Literal("RSA"), t.Literal("ECC")]),
+          executionTimeMs: t.Number(),
+        }),
+        400: t.Object({ error: t.String() }),
       },
       detail: { summary: "Encrypt text", tags: ["Encryption"] }
     }
@@ -129,10 +140,15 @@ const app = new Elysia()
           method: req.method,
           operationType: "decrypt",
           textHash,
-          executionTimeMs
+          executionTimeMs,
         });
 
-        return { decryptedText };
+        const response: DecryptResponseDto = {
+          decryptedText,
+          method: req.method,
+          executionTimeMs,
+        };
+        return response;
       } catch (err: any) {
         return new Response(JSON.stringify({ error: err.message }), {
           status: 400,
@@ -148,8 +164,12 @@ const app = new Elysia()
         privateKey: t.Optional(t.String())
       }),
       response: {
-        200: t.Object({ decryptedText: t.String() }),
-        400: t.Object({ error: t.String() })
+        200: t.Object({
+          decryptedText: t.String(),
+          method: t.Union([t.Literal("AES"), t.Literal("RSA"), t.Literal("ECC")]),
+          executionTimeMs: t.Number(),
+        }),
+        400: t.Object({ error: t.String() }),
       },
       detail: { summary: "Decrypt text", tags: ["Decryption"] }
     }
