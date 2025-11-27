@@ -85,10 +85,10 @@
               <div class="key-actions">
                 <button class="icon-btn" title="Import" (click)="triggerImport('aesFile')">📂</button>
                 <button class="icon-btn" title="Export" (click)="downloadFile(aesKey(), 'aes.key')">💾</button>
-                <button class="generate-btn" (click)="onGenerateAesKey()">Generate</button>
                 <input type="file" id="aesFile" hidden (change)="onFileSelected($event, 'aes')">
               </div>
             </div>
+            <button class="generate-btn-full" (click)="onGenerateAesKey()">GENERATE NEW KEY</button>
           </div>
         </div>
 
